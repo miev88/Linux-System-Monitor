@@ -3,8 +3,6 @@
 #include <string>
 #include <vector>
 
-#include <iostream>
-
 #include "linux_parser.h"
 
 using std::string;
@@ -158,10 +156,14 @@ float LinuxParser::CpuUtilization() {
 float LinuxParser::CpuUtilization(int pid) { 
    long total_cpu_time, lseconds;
    vector<long> js = Jiffies(pid);
-   // 0:utime, 1:stime, 2:cutime, 3:cstime, 4:starttime
-   total_cpu_time = js[0] + js[1] + js[2] + js[3];
-   lseconds = LinuxParser::UpTime() - (js[4] / sysconf(_SC_CLK_TCK));
-   return static_cast<float>(total_cpu_time) / sysconf(_SC_CLK_TCK) / lseconds;
+   // Check if process still exists
+   if (!js.empty()) {
+      // 0:utime, 1:stime, 2:cutime, 3:cstime, 4:starttime
+      total_cpu_time = js[0] + js[1] + js[2] + js[3];
+      lseconds = LinuxParser::UpTime() - (js[4] / sysconf(_SC_CLK_TCK));
+      return static_cast<float>(total_cpu_time) / sysconf(_SC_CLK_TCK) / lseconds;
+   }
+   return -1.0;
 }
 
 // Read and return the total number of processes
@@ -265,17 +267,17 @@ string LinuxParser::User(int pid) {
 
 // Read and return the uptime of a process
 long LinuxParser::UpTime(int pid) { 
-   string line, starttime;
-   int starttime_field = 22; // field 22 in /proc/[pid]/stat
+   string line, uptime;
+   int uptime_field = 14;
    int counter = 1;
    std::ifstream filestream(kProcDirectory + std::to_string(pid) + "/" + kStatFilename);
    if (filestream.is_open()) {
       std::getline(filestream, line);
       std::istringstream linestream(line);
-      while (linestream >> starttime) {
-	if (counter == starttime_field) {
-           //divide by sysconf(_SC_CLK_TCK) to convert clock ticks into seconds
-	   return std::stol(starttime) / sysconf(_SC_CLK_TCK);
+      while (linestream >> uptime) {
+	if (counter == uptime_field) {
+	   //divide by sysconf(_SC_CLK_TCK) to convert clock ticks into seconds
+	   return std::stol(uptime) / sysconf(_SC_CLK_TCK);
 	}
 	counter++;
       }
