@@ -145,11 +145,14 @@ vector<long> LinuxParser::Jiffies(int pid) {
 float LinuxParser::CpuUtilization() {
    long total_cpu_time, total_cpu_idle_time, total_cpu_usage_time;
    vector<long> js = Jiffies();
-   // 0:user, 1:nice, 2:system, 3:idle, 4:iowait, 5:irq, 6:softirq, 7:steal
-   total_cpu_time = js[0] + js[1] + js[2] + js[3] + js[4] + js[5] + js[6] + js[7];
-   total_cpu_idle_time = js[3] + js[4];
-   total_cpu_usage_time = total_cpu_time - total_cpu_idle_time;
-   return static_cast<float>(total_cpu_usage_time) / total_cpu_time; 
+   if (!js.empty()) {
+      // 0:user, 1:nice, 2:system, 3:idle, 4:iowait, 5:irq, 6:softirq, 7:steal
+      total_cpu_time = js[0] + js[1] + js[2] + js[3] + js[4] + js[5] + js[6] + js[7];
+      total_cpu_idle_time = js[3] + js[4];
+      total_cpu_usage_time = total_cpu_time - total_cpu_idle_time;
+      return static_cast<float>(total_cpu_usage_time) / total_cpu_time;
+   }
+   return -1.0; 
 }
 
 // Read and return CPU utilization of a process
@@ -268,7 +271,7 @@ string LinuxParser::User(int pid) {
 // Read and return the uptime of a process
 long LinuxParser::UpTime(int pid) { 
    string line, uptime;
-   int uptime_field = 14;
+   int uptime_field = 22;
    int counter = 1;
    std::ifstream filestream(kProcDirectory + std::to_string(pid) + "/" + kStatFilename);
    if (filestream.is_open()) {
